@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fuyongbin.mapper.MenuMapper">
+    <resultMap id="BaseResultMap" type="com.fuyongbin.domain.Menu">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="text" property="text" jdbcType="VARCHAR"/>
+        <result column="url" property="url" jdbcType="VARCHAR"/>
+        <!--一对一映射：用javaType-->
+        <association property="parent" javaType="com.fuyongbin.domain.Menu" columnPrefix="m_">
+            <result column="id" property="id"/>
+            <result column="text" property="text"/>
+            <result column="url" property="url"/>
+        </association>
+        <association property="permission" javaType="com.fuyongbin.domain.Permission">
+            <result column="pid" property="pid"/>
+            <result column="pname" property="pname"/>
+            <result column="presource" property="presource"/>
+        </association>
+
+        <!--多级联映射：用ofType-->
+        <collection property="children" ofType="com.fuyongbin.domain.Menu" select="listMenuChild" column="id"/>
+    </resultMap>
+    <!--
+    获取树形菜单数据
+    分步查询 先查根菜单
+    根据根菜单的id 查询出子菜单
+    1.查询根菜单-->
+    <select id="getTreeData" resultMap="BaseResultMap">
+        select * from menu AS m
+        LEFT JOIN permission AS p
+        ON m.permission_id=p.pid where parent_id is null
+    </select>
+    <!--根据根菜单的id  查询出子菜单-->
+    <select id="listMenuChild" resultMap="BaseResultMap">
+        select * from menu AS m
+        LEFT JOIN permission AS p
+        ON m.permission_id=p.pid where parent_id=#{id}
+  </select>
+    <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from menu
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+    <insert id="saveMenu" parameterType="com.fuyongbin.domain.Menu">
+    insert into menu (id,text,url,parent_id)values(#{id},#{text},#{url},#{parent.id})
+  </insert>
+    <update id="updateMenuRel">
+        update menu set parent_id=null where parent_id=#{id}
+    </update>
+    <update id="updateByPrimaryKey" parameterType="com.fuyongbin.domain.Menu">
+    update menu
+    set text = #{text,jdbcType=VARCHAR},
+      url = #{url,jdbcType=VARCHAR},
+      parent_id = #{parent.id,jdbcType=BIGINT}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Long">
+    select id, text, url, parent_id
+    from menu
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+    <select id="selectAll" resultMap="BaseResultMap">
+    SELECT m1.id,m1.text,m1.url,m2.id as m_id,m2.text as m_text,m2.url as m_url
+    FROM `menu` as m1
+    LEFT JOIN menu AS m2
+    ON m1.parent_id=m2.id
+    order by m1.id desc
+  </select>
+    <select id="selectParentIdById" resultType="java.lang.Long">
+        select parent_id from menu
+        where id=#{id}
+    </select>
+
+</mapper>
